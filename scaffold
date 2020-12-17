@@ -1,0 +1,107 @@
+#!/bin/bash
+
+_init () {
+	echo "Installing..."
+	dotnet nuget locals -c all
+	dotnet tool uninstall -g dotnet-aspnet-codegenerator
+	sudo apt-get remove dotnet-sdk-3.1 --purge
+	sudo apt-get install dotnet-sdk-3.1=3.1.302-1
+	sudo apt-mark hold dotnet-sdk-3.1
+	dotnet tool install -g dotnet-aspnet-codegenerator --version 3.1.3
+	dotnet tool install -g dotnet-aspnet-codegenerator --version 3.1.4
+	dotnet tool install -g dotnet-ef --version 3.1.10
+}
+
+_project () {
+	echo "Setting up project..."
+	cd ${1}
+	dotnet add package Microsoft.VisualStudio.Web.CodeGeneration.Design --version 3.1.4
+	dotnet add package Microsoft.EntityFrameworkCore.Design --version 3.1.10
+	dotnet add package Microsoft.AspNetCore.Identity.EntityFrameworkCore --version 3.1.10
+	dotnet add package Microsoft.AspNetCore.Identity.UI --version 3.1.10
+	dotnet add package Microsoft.EntityFrameworkCore.SqlServer --version 3.1.10
+	dotnet add package Microsoft.EntityFrameworkCore.Tools --version 3.1.10
+	dotnet add package Microsoft.EntityFrameworkCore --version 3.1.10
+}
+
+_scaffold () {
+	cd ${1}
+	read -p 'Name             (required): ' tempName
+	read -p 'Model            (optional): ' tempModel
+	read -p 'Database context (optional): ' tempDbContext
+	read -p 'Namespace:       (optional): ' tempNamespace
+	read -p 'Output dir:      (optional): ' tempOutDir
+	
+	tempNameX=${tempName}Controller
+	
+	if [ -z ${tempModel} ] ; then
+		tempModel=${PWD##*/}.Models.${tempName}
+	fi
+	if [ -z ${tempDbContext} ] ; then
+		tempDbContext=$(find ./**/*Context.cs | tail -n 1 | xargs -I{} basename {} .cs)
+	fi
+	if [ -z ${tempNamespace} ] ; then
+		tempNamespace=Controllers
+	fi
+	if [ -z ${tempOutDir} ] ; then
+		tempOutDir=Controllers
+	fi
+	
+	echo ""
+	echo "Results:"
+	echo "Name: $tempNameX"
+	echo "Model: $tempModel"
+	echo "DbContext: ${tempDbContext}"
+	echo "Namespace: ${tempNamespace}"
+	echo "OutDir: ${tempOutDir}"
+	echo ""
+	
+	#TODO Check if the model exists, and create one if not
+	
+	read -p 'Continue? y/n: ' tempContinue
+	if [ ${tempContinue} == "y" ] || [ ${tempContinue} == "Y" ] ; then
+		echo "dotnet aspnet-codegenerator controller -name ${tempNameX} -async -m ${tempModel} -dc ${tempDbContext} -namespace ${tempNamespace} -outDir ${tempOutDir} -udl"
+		dotnet aspnet-codegenerator controller \
+			-name ${tempNameX} \
+			-async -m ${tempModel} \
+			-dc ${tempDbContext} \
+			-namespace ${tempNamespace} \
+			-outDir ${tempOutDir} \
+			-udl
+	fi
+}
+
+_builddb () {
+	echo "Building the database..."
+	dotnet ef migrations add InitialCreate
+	dotnet ef database update
+}
+
+_help () {
+	echo ".NET Scaffolding tool"
+	echo ""
+	echo "-i --init                       - Install all the right packages and tools with the right versions"
+	echo "-p --project [project folder]   - Add all the required NuGet packages to a project"
+	echo "-s --scaffold [project folder]  - Start the scaffolding"
+	echo "-b --builddb                    - Build the database"
+	echo "-h --help                       - Show this help"
+}
+
+if [ "$1" == "-i" ] || [ "$1" == "--init" ]
+then
+	_init
+elif [ "$1" == "-p" ] || [ "$1" == "--project" ]
+then
+	_project ${2}
+elif [ "$1" == "-s" ] || [ "$1" == "--scaffold" ]
+then
+	_scaffold ${2}
+elif [ "$1" == "-b" ] || [ "$1" == "--builddb" ]
+then
+	_builddb
+elif [ "$1" == "-h" ] || [ "$1" == "--help" ]
+then
+	_help
+else
+	_help
+fi
