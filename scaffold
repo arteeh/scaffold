@@ -73,7 +73,7 @@ _scaffold () {
 
 _builddb () {
 	echo "Building the database..."
-	dotnet ef migrations add InitialCreate
+	dotnet ef migrations add ${1}
 	dotnet ef database update
 }
 
@@ -83,7 +83,7 @@ _help () {
 	echo "-i --init                       - Install all the right packages and tools with the right versions"
 	echo "-p --project [project folder]   - Add all the required NuGet packages to a project"
 	echo "-s --scaffold [project folder]  - Start the scaffolding"
-	echo "-b --builddb                    - Build the database"
+	echo "-b --builddb [migration name]   - Build the database"
 	echo "-h --help                       - Show this help"
 }
 
@@ -98,7 +98,7 @@ then
 	_scaffold ${2}
 elif [ "$1" == "-b" ] || [ "$1" == "--builddb" ]
 then
-	_builddb
+	_builddb ${2}
 elif [ "$1" == "-h" ] || [ "$1" == "--help" ]
 then
 	_help
